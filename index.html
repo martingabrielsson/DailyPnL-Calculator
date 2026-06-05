@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Trade Log</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif; font-size: 13px; background: #1a1a1a; color: #fff; }
+body { padding-bottom: env(safe-area-inset-bottom); }
+
+.header {
+  background: linear-gradient(135deg, #f5a07a 0%, #f07a7a 50%, #e85d8a 100%);
+  padding: 16px 20px;
+  padding-top: calc(16px + env(safe-area-inset-top));
+  display: flex; justify-content: space-between; align-items: center;
+}
+.header h1 { font-size: 15px; color: #fff; letter-spacing: 0.5px; font-weight: 700; }
+.header .date { font-size: 11px; color: rgba(255,255,255,0.75); }
+
+.stats-grid {
+  background: linear-gradient(135deg, #f5a07a 0%, #f07a7a 50%, #e85d8a 100%);
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+  border-bottom: none;
+}
+.stat { background: rgba(0,0,0,0.15); padding: 12px 20px; backdrop-filter: blur(4px); }
+.stat.full { grid-column: span 2; background: rgba(0,0,0,0.2); }
+.stat-label { font-size: 10px; color: rgba(255,255,255,0.7); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 3px; }
+.stat-value { font-size: 20px; font-weight: 700; color: #fff; }
+.stat-value.pos { color: #c8ffd4; }
+.stat-value.neg { color: #ffe0e0; }
+.stat-value.neutral { color: #fff; }
+.stat-value.cost { color: #ffe4b0; }
+
+.form-section { background: #222; border-bottom: 1px solid #333; padding: 14px 20px; }
+.form-title { font-size: 10px; color: #888; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 12px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.form-row.three { grid-template-columns: 2fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.6px; }
+.form-group input, .form-group select {
+  background: #2e2e2e; border: 1px solid #3a3a3a; color: #fff;
+  padding: 9px 12px; font-family: inherit; font-size: 14px;
+  border-radius: 10px; width: 100%; outline: none; height: 42px;
+  -webkit-appearance: none; appearance: none;
+}
+.form-group select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px;
+}
+.form-group input:focus, .form-group select:focus { border-color: #f07a7a; }
+
+.toggle-row { display: flex; gap: 8px; }
+.dir-btn, .type-btn, .outcome-btn {
+  flex: 1; height: 42px; border: 1px solid #3a3a3a; background: #2e2e2e;
+  color: #888; font-family: inherit; font-size: 13px;
+  border-radius: 10px; cursor: pointer; text-align: center; line-height: 42px;
+  font-weight: 600; letter-spacing: 0.3px;
+}
+.dir-btn.active-long  { background: #1e3a28; border-color: #4caf70; color: #4caf70; }
+.dir-btn.active-short { background: #3a1e1e; border-color: #f07a7a; color: #f07a7a; }
+.type-btn.active-mini  { background: #2a2040; border-color: #c084fc; color: #c084fc; }
+.type-btn.active-micro { background: #1e2a40; border-color: #7ab4f5; color: #7ab4f5; }
+.outcome-btn.active-win  { background: #1e3a28; border-color: #4caf70; color: #4caf70; }
+.outcome-btn.active-loss { background: #3a1e1e; border-color: #f07a7a; color: #f07a7a; }
+
+.calc-preview {
+  background: #2e2e2e; border: 1px solid #3a3a3a; border-radius: 10px;
+  padding: 9px 14px; margin-bottom: 10px;
+  display: flex; justify-content: space-between; font-size: 11px; color: #888;
+}
+.calc-preview .val { color: #f5a07a; font-weight: 600; }
+
+.add-btn {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, #f5a07a, #e85d8a);
+  border: none; color: #fff; font-family: inherit; font-size: 14px;
+  font-weight: 700; letter-spacing: 0.5px; border-radius: 12px; cursor: pointer;
+  margin-top: 4px; box-shadow: 0 4px 15px rgba(232,93,138,0.4);
+}
+.add-btn:active { opacity: 0.85; }
+
+.log-section { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+.log-header {
+  display: grid; grid-template-columns: 2fr 0.8fr 0.5fr 0.8fr 0.8fr 0.9fr;
+  gap: 4px; padding: 7px 20px; background: #1a1a1a; border-bottom: 1px solid #2a2a2a;
+}
+.log-header span { font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 0.6px; text-align: right; }
+.log-header span:first-child { text-align: left; }
+
+.trade-row {
+  display: grid; grid-template-columns: 2fr 0.8fr 0.5fr 0.8fr 0.8fr 0.9fr;
+  gap: 4px; padding: 10px 20px; border-bottom: 1px solid #222; align-items: center;
+}
+.trade-row.win  { border-left: 3px solid #4caf70; }
+.trade-row.loss { border-left: 3px solid #f07a7a; }
+.trade-ticker { font-size: 13px; font-weight: 700; color: #fff; }
+.trade-sub { font-size: 9px; color: #555; margin-top: 1px; }
+.trade-dir { font-size: 10px; text-align: right; font-weight: 700; }
+.trade-dir.long  { color: #4caf70; }
+.trade-dir.short { color: #f07a7a; }
+.trade-val { font-size: 11px; text-align: right; }
+.trade-val.pos   { color: #4caf70; }
+.trade-val.neg   { color: #f07a7a; }
+.trade-val.muted { color: #555; }
+.trade-contracts { font-size: 11px; color: #666; text-align: right; }
+
+.empty-state { padding: 40px 20px; text-align: center; color: #444; font-size: 13px; }
+
+.footer {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #1a1a1a; border-top: 1px solid #2a2a2a;
+  padding: 10px 20px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+.reset-btn {
+  width: 100%; padding: 12px;
+  background: #2e2e2e; border: 1px solid #444; color: #888;
+  font-family: inherit; font-size: 12px; letter-spacing: 0.5px;
+  border-radius: 10px; cursor: pointer; font-weight: 600;
+}
+.reset-btn:active { background: #3a1e1e; border-color: #f07a7a; color: #f07a7a; }
+
+.confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
+.confirm-overlay.show { display: flex; }
+.confirm-box { background: #222; border: 1px solid #333; border-radius: 16px; padding: 28px 24px; width: 80%; max-width: 300px; text-align: center; }
+.confirm-box p { color: #fff; font-size: 15px; font-weight: 600; margin-bottom: 20px; }
+.confirm-btns { display: flex; gap: 12px; }
+.confirm-btns button { flex: 1; padding: 13px; font-family: inherit; font-size: 13px; border-radius: 10px; cursor: pointer; border: none; font-weight: 700; }
+.confirm-yes { background: linear-gradient(135deg, #f07a7a, #e85d8a); color: #fff; }
+.confirm-no  { background: #2e2e2e; color: #888; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📈 Trade Log</h1>
+  <span class="date" id="todayDate"></span>
+</div>
+
+<div class="stats-grid">
+  <div class="stat"><div class="stat-label">W / L</div><div class="stat-value neutral" id="wl">0 / 0</div></div>
+  <div class="stat"><div class="stat-label">Win Rate</div><div class="stat-value neutral" id="winrate">—</div></div>
+  <div class="stat"><div class="stat-label">Gross P&L</div><div class="stat-value neutral" id="grossPL">0.00</div></div>
+  <div class="stat"><div class="stat-label">Net P&L</div><div class="stat-value neutral" id="netPL">0.00</div></div>
+  <div class="stat"><div class="stat-label">Total Fees</div><div class="stat-value cost" id="totalFees">0.00</div></div>
+  <div class="stat"><div class="stat-label">Total Commissions</div><div class="stat-value cost" id="totalComm">0.00</div></div>
+  <div class="stat full"><div class="stat-label">Total Position Costs</div><div class="stat-value cost" id="totalCosts">0.00</div></div>
+</div>
+
+<div class="form-section">
+  <div class="form-title">+ New Trade</div>
+  <div class="form-row three">
+    <div class="form-group">
+      <label>Instrument</label>
+      <select id="ticker" onchange="onTickerChange()">
+        <option value="" disabled selected>Select…</option>
+        <option value="NQ">NQ</option>
+        <option value="MNQ">MNQ</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Contracts</label>
+      <input id="contracts" type="number" inputmode="numeric" placeholder="1" min="1" step="1" oninput="updatePreview()" />
+    </div>
+    <div class="form-group">
+      <label>Direction</label>
+      <div class="toggle-row">
+        <div class="dir-btn active-long" id="btnLong" onclick="setDir('LONG')">L</div>
+        <div class="dir-btn" id="btnShort" onclick="setDir('SHORT')">S</div>
+      </div>
+    </div>
+  </div>
+  <div class="form-group" style="margin-bottom:10px;">
+    <label>Contract Type</label>
+    <div class="toggle-row">
+      <div class="type-btn active-mini" id="btnMini" onclick="setType('mini')">Mini</div>
+      <div class="type-btn" id="btnMicro" onclick="setType('micro')">Micro</div>
+    </div>
+  </div>
+  <div class="calc-preview">
+    <span>Fees: <span class="val" id="prevFees">—</span></span>
+    <span>Commission: <span class="val" id="prevComm">—</span></span>
+    <span>Total: <span class="val" id="prevTotal">—</span></span>
+  </div>
+  <div class="form-group" style="margin-bottom:8px;">
+    <label>Gross P&L</label>
+    <input id="pnl" type="text" inputmode="decimal" placeholder="e.g. 250.00" />
+  </div>
+  <div class="toggle-row" style="margin-bottom:10px;">
+    <div class="outcome-btn active-win" id="btnWin" onclick="setOutcome('win')">Win</div>
+    <div class="outcome-btn" id="btnLoss" onclick="setOutcome('loss')">Loss</div>
+  </div>
+  <button class="add-btn" onclick="addTrade()">Add Trade</button>
+</div>
+
+<div class="log-section">
+  <div class="log-header">
+    <span>Instrument</span><span>Cts</span><span>Dir</span><span>Gross</span><span>Cost</span><span>Net</span>
+  </div>
+  <div id="tradeLog"></div>
+</div>
+
+<div class="footer">
+  <button class="reset-btn" onclick="confirmReset()">↺ Reset Day</button>
+</div>
+
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <p>Reset all trades?</p>
+    <div class="confirm-btns">
+      <button class="confirm-yes" onclick="resetDay()">Reset</button>
+      <button class="confirm-no" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let trades = [], direction = 'LONG', contractType = 'mini', outcome = 'win';
+const RATES = { mini: { fee: 2.80, comm: 1.00 }, micro: { fee: 0.74, comm: 0.50 } };
+
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+
+function onTickerChange() {
+  const v = document.getElementById('ticker').value;
+  if (v === 'NQ') setType('mini');
+  else if (v === 'MNQ') setType('micro');
+  updatePreview();
+}
+
+function setDir(d) {
+  direction = d;
+  document.getElementById('btnLong').className = 'dir-btn' + (d === 'LONG' ? ' active-long' : '');
+  document.getElementById('btnShort').className = 'dir-btn' + (d === 'SHORT' ? ' active-short' : '');
+}
+
+function setType(t) {
+  contractType = t;
+  document.getElementById('btnMini').className = 'type-btn' + (t === 'mini' ? ' active-mini' : '');
+  document.getElementById('btnMicro').className = 'type-btn' + (t === 'micro' ? ' active-micro' : '');
+  updatePreview();
+}
+
+function setOutcome(o) {
+  outcome = o;
+  document.getElementById('btnWin').className = 'outcome-btn' + (o === 'win' ? ' active-win' : '');
+  document.getElementById('btnLoss').className = 'outcome-btn' + (o === 'loss' ? ' active-loss' : '');
+  const pnlInput = document.getElementById('pnl');
+  const val = parseFloat(pnlInput.value.replace(',', '.'));
+  if (!isNaN(val) && val !== 0) {
+    pnlInput.value = o === 'win' ? Math.abs(val) : -Math.abs(val);
+  }
+}
+
+function calcCosts(n, type) {
+  const r = RATES[type];
+  const fees = +(n * r.fee).toFixed(2);
+  const comm = +(n * r.comm).toFixed(2);
+  return { fees, comm, total: +(fees + comm).toFixed(2) };
+}
+
+function updatePreview() {
+  const n = parseFloat(document.getElementById('contracts').value) || 0;
+  if (n <= 0) { ['prevFees','prevComm','prevTotal'].forEach(id => document.getElementById(id).textContent = '—'); return; }
+  const c = calcCosts(n, contractType);
+  document.getElementById('prevFees').textContent = c.fees.toFixed(2);
+  document.getElementById('prevComm').textContent = c.comm.toFixed(2);
+  document.getElementById('prevTotal').textContent = c.total.toFixed(2);
+}
+
+function addTrade() {
+  const ticker = document.getElementById('ticker').value;
+  const contracts = parseFloat(document.getElementById('contracts').value);
+  const pnlRaw = document.getElementById('pnl').value.replace(',', '.');
+  const pnl = parseFloat(pnlRaw);
+  if (!ticker) { document.getElementById('ticker').focus(); return; }
+  if (!contracts || contracts < 1) { document.getElementById('contracts').focus(); return; }
+  if (isNaN(pnl)) { document.getElementById('pnl').focus(); return; }
+  const signedPnl = outcome === 'win' ? Math.abs(pnl) : -Math.abs(pnl);
+  const costs = calcCosts(contracts, contractType);
+  trades.unshift({ ticker, contracts, contractType, direction, pnl: signedPnl, fees: costs.fees, comm: costs.comm });
+  document.getElementById('contracts').value = '';
+  document.getElementById('pnl').value = '';
+  document.getElementById('ticker').selectedIndex = 0;
+  updatePreview();
+  render();
+}
+
+function fmt(n) { return (n >= 0 ? '+' : '') + n.toFixed(2); }
+
+function render() {
+  const wins = trades.filter(t => t.pnl > 0).length;
+  const losses = trades.filter(t => t.pnl <= 0).length;
+  const grossPL = trades.reduce((s,t) => s+t.pnl, 0);
+  const totalFees = trades.reduce((s,t) => s+t.fees, 0);
+  const totalComm = trades.reduce((s,t) => s+t.comm, 0);
+  const netPL = grossPL - totalFees - totalComm;
+  const wr = trades.length ? Math.round((wins/trades.length)*100) : null;
+
+  document.getElementById('wl').textContent = wins + ' / ' + losses;
+  document.getElementById('winrate').textContent = wr !== null ? wr + '%' : '—';
+  document.getElementById('totalFees').textContent = totalFees.toFixed(2);
+  document.getElementById('totalComm').textContent = totalComm.toFixed(2);
+  document.getElementById('totalCosts').textContent = (totalFees + totalComm).toFixed(2);
+
+  const gEl = document.getElementById('grossPL');
+  gEl.textContent = fmt(grossPL);
+  gEl.className = 'stat-value ' + (grossPL > 0 ? 'pos' : grossPL < 0 ? 'neg' : 'neutral');
+
+  const nEl = document.getElementById('netPL');
+  nEl.textContent = fmt(netPL);
+  nEl.className = 'stat-value ' + (netPL > 0 ? 'pos' : netPL < 0 ? 'neg' : 'neutral');
+
+  const log = document.getElementById('tradeLog');
+  if (!trades.length) { log.innerHTML = '<div class="empty-state">No trades logged yet</div>'; return; }
+  log.innerHTML = trades.map(t => {
+    const net = t.pnl - t.fees - t.comm;
+    return `<div class="trade-row ${t.pnl > 0 ? 'win' : 'loss'}">
+      <div><div class="trade-ticker">${t.ticker}</div><div class="trade-sub">${t.contractType}</div></div>
+      <span class="trade-contracts">${t.contracts}</span>
+      <span class="trade-dir ${t.direction==='LONG'?'long':'short'}">${t.direction==='LONG'?'L':'S'}</span>
+      <span class="trade-val ${t.pnl>=0?'pos':'neg'}">${fmt(t.pnl)}</span>
+      <span class="trade-val muted">${(t.fees+t.comm).toFixed(2)}</span>
+      <span class="trade-val ${net>=0?'pos':'neg'}">${fmt(net)}</span>
+    </div>`;
+  }).join('');
+}
+
+function confirmReset() { document.getElementById('confirmOverlay').classList.add('show'); }
+function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('show'); }
+function resetDay() { trades = []; closeConfirm(); render(); }
+
+render();
+</script>
+</body>
+</html>
